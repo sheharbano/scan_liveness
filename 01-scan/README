@@ -1,0 +1,7 @@
+This folder has scripts to run scans.
+
+- “methodology.txt” explains in detail our scan methodology. It’s a longish read, but important to read to understand how we conducted the scans. 
+
+- “zmap-liveness/” contains zmap with our modifications.
+
+- “scripts/” has scripts to configure and run zmap

@@ -1,0 +1,31 @@
+- Add the following lines to crontab under sudo. 
+  * suitably adjust paths
+  * adjust script run times. Run consecutive scripts at least 3 1/2 hrs apart to allow one scan to finish before another starts
+
+# Block1
+0 22 7 * * /home/parrhesia/scripts/run_zmap/block1/run_zmap_icmp1.sh
+1 22 7 * * /home/parrhesia/scripts/run_zmap/block1/run_zmap_icmp2.sh
+
+# Block2
+30 1 8 * * /home/parrhesia/scripts/run_zmap/block2/run_zmap_icmp1.sh
+31 1 8 * * /home/parrhesia/scripts/run_zmap/block2/run_zmap_icmp2.sh
+
+# Block3
+0 5 8 * * /home/parrhesia/scripts/run_zmap/block3/run_zmap_icmp1.sh
+1 5 8 * * /home/parrhesia/scripts/run_zmap/block3/run_zmap_icmp2.sh
+
+# Block4
+30 8 8 * * /home/parrhesia/scripts/run_zmap/block4/run_zmap_icmp1.sh
+31 8 8 * * /home/parrhesia/scripts/run_zmap/block4/run_zmap_icmp2.sh
+
+# Block5
+0 12 8 * * /home/parrhesia/scripts/run_zmap/block5/run_zmap_icmp1.sh
+1 12 8 * * /home/parrhesia/scripts/run_zmap/block5/run_zmap_icmp2.sh
+
+# Block6
+30 15 8 * * /home/parrhesia/scripts/run_zmap/block6/run_zmap_icmp1.sh
+31 15 8 * * /home/parrhesia/scripts/run_zmap/block6/run_zmap_icmp2.sh
+
+# Block7
+0 19 8 * * /home/parrhesia/scripts/run_zmap/block7/run_zmap_icmp1.sh
+1 19 8 * * /home/parrhesia/scripts/run_zmap/block7/run_zmap_icmp2.sh

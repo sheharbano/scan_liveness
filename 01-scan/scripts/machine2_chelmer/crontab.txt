@@ -1,0 +1,45 @@
+- Add the following lines to crontab under sudo. 
+  * suitably adjust paths
+  * adjust script run times. Run consecutive scripts at least 3 1/2 hrs apart to allow one scan to finish before another starts
+
+# Block1
+0 22 7 * * /home/bano/scripts/run_zmap/block1/run_zmap_dns.sh
+1 22 7 * * /home/bano/scripts/run_zmap/block1/run_zmap_ntp.sh
+2 22 7 * * /home/bano/scripts/run_zmap/block1/run_zmap_telnet.sh
+3 22 7 * * /home/bano/scripts/run_zmap/block1/run_zmap_cwmp.sh
+
+# Block2
+30 1 8 * * /home/bano/scripts/run_zmap/block2/run_zmap_dns.sh
+31 1 8 * * /home/bano/scripts/run_zmap/block2/run_zmap_ntp.sh
+32 1 8 * * /home/bano/scripts/run_zmap/block2/run_zmap_telnet.sh
+33 1 8 * * /home/bano/scripts/run_zmap/block2/run_zmap_cwmp.sh
+
+# Block3
+0 5 8 * * /home/bano/scripts/run_zmap/block3/run_zmap_dns.sh
+1 5 8 * * /home/bano/scripts/run_zmap/block3/run_zmap_ntp.sh
+2 5 8 * * /home/bano/scripts/run_zmap/block3/run_zmap_telnet.sh
+3 5 8 * * /home/bano/scripts/run_zmap/block3/run_zmap_cwmp.sh
+
+# Block4
+30 8 8 * * /home/bano/scripts/run_zmap/block4/run_zmap_dns.sh
+31 8 8 * * /home/bano/scripts/run_zmap/block4/run_zmap_ntp.sh
+32 8 8 * * /home/bano/scripts/run_zmap/block4/run_zmap_telnet.sh
+33 8 8 * * /home/bano/scripts/run_zmap/block4/run_zmap_cwmp.sh
+
+# Block5
+0 12 8 * * /home/bano/scripts/run_zmap/block5/run_zmap_dns.sh
+1 12 8 * * /home/bano/scripts/run_zmap/block5/run_zmap_ntp.sh
+2 12 8 * * /home/bano/scripts/run_zmap/block5/run_zmap_telnet.sh
+3 12 8 * * /home/bano/scripts/run_zmap/block5/run_zmap_cwmp.sh
+
+# Block6
+30 15 8 * * /home/bano/scripts/run_zmap/block6/run_zmap_dns.sh
+31 15 8 * * /home/bano/scripts/run_zmap/block6/run_zmap_ntp.sh
+32 15 8 * * /home/bano/scripts/run_zmap/block6/run_zmap_telnet.sh
+33 15 8 * * /home/bano/scripts/run_zmap/block6/run_zmap_cwmp.sh
+
+# Block7
+0 19 8 * * /home/bano/scripts/run_zmap/block7/run_zmap_dns.sh
+1 19 8 * * /home/bano/scripts/run_zmap/block7/run_zmap_ntp.sh
+2 19 8 * * /home/bano/scripts/run_zmap/block7/run_zmap_telnet.sh
+3 19 8 * * /home/bano/scripts/run_zmap/block7/run_zmap_cwmp.sh

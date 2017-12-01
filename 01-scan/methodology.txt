@@ -1,0 +1,234 @@
+In this document, we discuss our probing methodology and the tools we
+use. The accompanying folder zmap-liveness contains ZMap (with our
+modifications) for different protocols that we probed. We ran a
+separate instance of ZMap for each protocol. Moreover, for ICMP, we
+used two instances (zmap-icmp-first and zmap-icmp-second) that were
+run in parallel on the same machine.  
+
+====== 
+Tools 
+======
+
+To test for aliveness, we use Internet-wide scanning tools from the
+ZMap Project (https://github.com/zmap/zmap). In particular, for the
+network, transport, and UDP-based application layer scans, we use the
+ZMap scanner, and for TCP-based application layer scans we use the
+ZGrab scanner (https://github.com/zmap/zgrab). 
+
+For TCP-based applications, we send the application-layer probes to
+only the set of IP addresses that respond to the transport-layer probe
+with a SYN-ACK. We do so by piping the output of ZMap to ZGrab via
+ZTee. By default ZTee does not output unique IP addresses, as ZMap may
+receive multiple TCP SYN-ACK packets from an IP address. We tweaked
+the ZMap source code to only output a single response per IP address.
+Note that even though ZGrab receives IPs that have already responded
+successfully to ZMap TCP SYN scan, due to architectural differences it
+cannot reuse the connection, and has to initiate a fresh TCP
+connection.
+
+======= 
+Probes 
+=======
+
+At the network layer, we probe using ICMP ping packets. At the
+transport layer, we send TCP SYNs for the services corresponding to
+ports 80 (HTTP), 443 (HTTPS), 22 (SSH), 23 (Telnet), and 7547
+(CWMP).(For UDP, explicit transport layer probes do not exist.)  At
+the application layer, in addition to the above five TCP-based
+services, we also send application-based payloads for two UDP-based
+applications: DNS and NTP. 
+
+============ 
+Experimental Set-up 
+============
+
+We conduct eight full IPv4 scans simultaneously: an ICMP scan, five
+TCP scans, and two UDP scans. As mentioned above, the TCP scans
+include both transport layer and application layer probes. While it
+would be straight-forward to conduct these scans on eight separate
+machines in parallel, we had access to only three physical machines
+(residing in the same network). We distributed the scans as follows.
+We ran:
+
+\-> HTTP, SSH, and HTTPS scans on the first machine (zeus) with 16 cores with
+hyperthreading and 64G memory.
+
+\-> CWMP, Telnet, DNS, and NTP on the second machine (chelmer) with 16 cores/
+64G memory.
+
+\-> ICMP on the third machine (parrhesia) with 4 cores / 32G memory. 
+
+We isolated different scan instances by manually setting CPU affinity.
+We also allocated each scan instance its own IP address from the same
+/24 academic network.  The three scan machines connect to a switch
+that forwards traffic to the border router via a 1Gbps link (shared
+with other traffic), which connects to the national education network.
+
+We added reverse DNS entries for our scan IPs so that these can be
+linked to our research project.  We also ran web pages on port 80 from
+all these IPs to explain our experiment and provide the option to
+exclude.
+
+============= 
+Scanning Configuration 
+=============
+
+In theory, conducting scans using the above set-up is simple. However,
+in practice we must first instrument and understand the tools to
+identify packet losses both due to the tool's design as well as due to
+external factors, and adjust our scanning configuration to mitigate
+them. We discuss potential sources of loss and our modifications to
+the scanning pipeline below.
+
+
+1. Synchronizing Cross-Protocol Scans 
+———————————————————
+
+Internet liveness can legitimately change over time due to hosts
+coming up and down, and dynamic IP address assignment practices. To
+mitigate temporal churn in Internet liveness, we conduct our scans
+such that different protocol probes to the same target IP reach it
+within a small time window.  To achieve this, (i) we scan IPv4 in /3
+blocks, and (ii) within each block, we configure parallel scans to
+probe IPs in the same order by using the same seed value. This
+block-scanning strategy provides a synchronization opportunity at the
+start of each new block. 
+
+To quantify the lag after this modification, we measure the maximum
+time lag between different protocol probes sent to the same target by
+instrumenting the timestamp of every millionth packet sent by ZMap. We
+found that this lag can be up to 25 minutes, but more than 80% of
+probes are sent to the target within a 10-minute time window.
+
+2. Probe Redundancy 
+———————————————————
+
+Our probes (or the responses) can be lost along the path due to
+transient network problems. To mitigate network loss, we incorporate
+redundancy in our probes. While ZMap is capable of retransmitting
+packets, it does so in a back-to-back fashion. Such a close-in-time
+retransmission is likely to share the same fate as the original probe.
+We modified ZMap to conduct “delayed retransmissio” as follows: the
+modified ZMap stores each IP address it scans for the first time in a
+queue of size N. When the queue is full, it begins de-queuing and
+re-transmitting, interleaving new probes with retransmissions.
+Effectively, the delay between original and retransmitted probes is
+proportional to size of the queue and ZMap's packet-sending rate. We
+use N=1 million.
+
+3. Scan Rate 
+—————————————
+
+The policy at our scan network limited the allowed bandwidth to 500
+Mbps. We ran ZMap scans at 50Kpps (packets per second) to ensure that
+aggregate scan bandwidth stays under 500Mbps.  Although all our
+machines have 1G NICs, one potential source of congestion is
+connection to the NAS server which is on the same network. We avoid
+this by directly connecting 2 of our 3 machines (that have 2 NICs) to
+the NAS over a point-to-point connection. 
+
+4. State Timeout 
+————————————————
+
+An important parameter that can affect our inference of liveness is
+the connection timeout value used by ZGrab.  Specifically, how long to
+wait for a reply after sending TCP SYN packet, and how long to wait
+for an application-layer reply after sending a request on an
+established TCP connection. We use the default value of 10 seconds in
+both cases. To check if increasing timeout changes transport- or
+application-layer success, we conducted HTTP scan with generous
+timeouts of 30 seconds. We found that there are no gains---the
+distribution of successful HTTP responses remains roughly similar to
+that with timeout of 10 seconds, but using higher timeout causes a
+significant increase in scan time (previous scan duration increases by
+50%). A related question in the context of \zmap is how long to
+continue to listen to incoming traffic after the scan completes (the
+“cooldown value”}). We use a value of 10 minutes as recommended by a
+recent study
+(http://sheharbano.com/assets/publications/ndss16_tor_differential.pdf). 
+
+5. Logging Response Packets 
+————————————————
+
+Two sources of response-packet loss at the scan machine can affect our
+liveness inference: (i) interface loss due to pcap buffer overload,
+and (ii) ZMap / ZGrab does not log the response packet by design.
+Indeed, we found both problems manifesting. 
+
+Mitigating interface loss:
+
+
+    * We found the default pcap buffer size on the system too small to
+    * handle
+	the incoming traffic, and increased it to a generous 5GB. 
+
+    * Because we run multiple scan instances on a single machine, and
+    * ZMap
+	only checks whether the incoming packets are meant for that
+instance at the application layer, the buffer of an instance fills up
+with incoming traffic from other instances too. We instead perform
+traffic splitting at network layer by adding a pcap filter in the ZMap
+source code. 
+    
+    * Despite the above two modifications, we still observed high
+	interface loss for ICMP scans. We work around this problem by
+running two simultaneous ICMP scans without retransmission at half the
+scan rate of other scans. The ICMP scans are spaced apart by 1 second
+to simulate delayed retransmission.
+
+
+Missing logging in ZMap:
+
+   * Zmap by default does not record all ICMP error messages for
+   * TCP/UDP
+    scans. We tweaked the source code to...
+
+   * Zmap only records RST packets with ACK bit set. We modified the
+   * source
+    code to record all RST packets.  
+
+
+With the above modifications to the scanning tools and the scan
+configuration, we conducted the big scan on 3rd May, 2017 and later on
+4th, 5th, and 7th September 2017. It takes about 3 hours 15 minutes to
+scan each block. A full scan takes a little less than 24 hours to
+complete.
+
+
+================= 
+Inferring Aliveness 
+==================
+
+We now sketch how we infer aliveness at each layer.
+
+Inferring aliveness at Network layer 
+————————————————
+
+Any reply from the probed IP address, regardless of the probe type,
+indicates network-layer aliveness. However, it is important to note
+that the network-layer aliveness view inferred from ICMP probes is
+likely different than what one gets from TCP and UDP probes.
+
+It is also possible that an IP address does not respond when directly
+probed (for example, it blocks ICMP echo requests), but responds with
+errors when routing on behalf of other IP addresses. Hence, in
+addition one can “infer” aliveness of an IP address upon observing
+error replies for other IP addresses.
+
+Inferring aliveness at Transport Layer 
+————————————————
+
+An IP address is transport-layer alive if we receive either a TCP
+SYN-ACK or an application-layer response from the IP address, as a
+result of transport-layer and application-layer probing respectively.
+If on the other hand, we receive only a TCP RST, we say that the IP
+address is transport-layer ‘active', but not transport-layer ‘alive’.
+
+Inferring aliveness at Application Layer 
+————————————————
+
+An IP address is application-layer alive if we receive a ‘valid’
+response from the IP address, as a result of application-layer
+probing.  If on the other hand, we receive a non-conforming
+application-layer response, we say that the IP address is
+application-layer ‘active', but not application-layer ‘alive’.

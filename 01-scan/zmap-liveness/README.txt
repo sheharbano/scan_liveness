@@ -1,8 +1,4 @@
-IMPORTANT NOTE: The modified ZMap provided here has *only* been tested with the provided run scripts. In particular, the packet retransmission modifications are intended for single-threaded ZMap scan only. 
-
-* Running this software in any other way might have unintended possibly adverse effects. *
-
-To get the ZMap modifications code, contact s.bano@ucl.ac.uk
+IMPORTANT NOTE: The modified ZMap has *only* been tested with the provided run scripts. In particular, the packet retransmission modifications are intended for single-threaded ZMap scan only. Running this software in any other way might have unintended possibly adverse effects. Therefore to get the ZMap modifications code, contact s.bano@ucl.ac.uk
 
 ================
 Only the first time do the following to set up zmap dependencies
